@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -26,6 +27,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -36,15 +38,15 @@ import com.example.jetpack_compose_weather_app.api.WeatherModel
 
 @Composable
 fun WeatherDisplay(viewModel: WeatherViewModel) {
-//    val weatherData by viewModel.weatherData.collectAsState()
     var city by remember {
         mutableStateOf("")
     }
 
+    val keyboardController = LocalSoftwareKeyboardController.current
+
     val weatherResult = viewModel.weatherResult.observeAsState()
 
-    Column (
-        modifier = Modifier
+    Column (        modifier = Modifier
             .fillMaxWidth()
             .padding(8.dp),
         horizontalAlignment = Alignment.CenterHorizontally
@@ -64,6 +66,7 @@ fun WeatherDisplay(viewModel: WeatherViewModel) {
             )
             IconButton(onClick = {
                 viewModel.fetchWeather(city)
+                keyboardController?.hide()
             }) {
                 Icon(imageVector = Icons.Default.Search, contentDescription = "Search for location")
 
@@ -127,76 +130,48 @@ fun WeatherDetail(data: WeatherModel) {
             textAlign = TextAlign.Center,
             color =  Color.Gray
         )
+
+        Spacer(modifier = Modifier.height(16.dp))
+        Card{
+            Column(
+                modifier = Modifier.fillMaxWidth()
+            ){
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceAround
+                ) {
+                    WeatherDetails("Feels like", "${data.current.feelslike_c} °C")
+                    WeatherDetails("Wind speed", "${data.current.wind_kph} km/h")
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceAround
+                ) {
+                    WeatherDetails("Humidity", "${data.current.humidity}%")
+                    WeatherDetails("UV", data.current.uv)
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceAround
+                ) {
+                    WeatherDetails("Visibility", "${data.current.vis_km} km")
+                    WeatherDetails("Air pressure", "${data.current.pressure_mb} mb")
+                }
+
+                //... add more weather details as needed
+            }
+        }
     }
 }
 
+@Composable
+fun WeatherDetails(key: String, value: String) {
+    Column (modifier = Modifier.padding(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally){
+        Text(text = value, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+        Text(text = key, fontWeight = FontWeight.SemiBold, color = Color.Gray)
+    }
+}
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-//    Box(modifier = Modifier
-//        .fillMaxSize()
-//        .paint(
-//            painterResource(id = R.drawable.ic_launcher_background),
-//            contentScale = ContentScale.FillBounds
-//        )) {
-//        Column(modifier = Modifier
-//            .fillMaxSize()
-//            .padding(16.dp),
-//            horizontalAlignment = Alignment.CenterHorizontally,
-//            verticalArrangement = Arrangement.Top
-//        ) {
-//            Spacer(modifier = Modifier.height(180.dp))
-//            OutlinedTextField(value = city,
-//                onValueChange = {city = it},
-//                label = { Text(text = "City") },
-//                modifier = Modifier.fillMaxWidth(),
-//                shape = RoundedCornerShape(30.dp),
-//                colors = TextFieldDefaults.colors(
-//                    focusedContainerColor = Color.White,
-//                    unfocusedContainerColor = Color.White,
-//                    unfocusedIndicatorColor = Blue1,
-//                    focusedLabelColor = DarkBlue1
-//                )
-//            )
-//            Spacer(modifier = Modifier.height(16.dp))
-//            Button(onClick = {viewModel.fetchWeather(city, apiKey)},
-//                colors = ButtonDefaults.buttonColors(Blue1)
-//            ) {
-//                Text(text = "Check Weather")
-//            }
-//            Spacer(modifier = Modifier.height(16.dp))
-//
-//            weatherData?.let {
-//                Log.d("WeatherData", "Weather data received: $it")
-//                Row(modifier =  Modifier.fillMaxWidth(),
-//                    horizontalArrangement = Arrangement.SpaceEvenly) {
-//                    WeatherCard(label = city, value = it.name, icon = Icons.Default.Place)
-//                    WeatherCard(label = "Temperature", value = "${it.main.temp}°C", icon = Icons.Default.Star)
-//                }
-//                Row(modifier = Modifier.fillMaxWidth(),
-//                    horizontalArrangement = Arrangement.SpaceEvenly){
-//                    WeatherCard(label = "Humidity", value = "${it.main.humidity}%", icon = Icons.Default.Warning)
-//                    WeatherCard(label = "Description", value = it.weather[0].description, icon = Icons.Default.Info)
-//                }
-//            }
-//        }
-//    }
-//}
