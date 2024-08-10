@@ -74,4 +74,12 @@ dependencies {
     //viewmodel, navigation
     implementation(libs.androidx.lifecycle.viewmodel.ktx)
     implementation(libs.androidx.navigation.compose)
+
+    //live data
+    implementation(libs.androidx.runtime.livedata)
+
+    //coil compose
+    implementation(libs.coil.compose)
+
+
 }
