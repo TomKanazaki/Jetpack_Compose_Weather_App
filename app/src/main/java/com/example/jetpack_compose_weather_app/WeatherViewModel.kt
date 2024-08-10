@@ -18,7 +18,7 @@ class WeatherViewModel: ViewModel() {
                 Log.d("API Response", "$response") // Log the response
                 weatherDataFl.value = response
             } catch (e: Exception) {
-                Log.e("API Error", "Error fetching weather", e) // Log any errors
+                Log.e("API Error", "Error fetching weather", e) // Log  any errors
                 e.printStackTrace() 
             }
         }
