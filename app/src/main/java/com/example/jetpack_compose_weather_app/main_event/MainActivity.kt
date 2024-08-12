@@ -18,13 +18,3 @@ class MainActivity : ComponentActivity() {
         }
     }
 }
-
-
-
-//@Preview(showBackground = true)
-//@Composable
-//fun WeatherPreview() {
-//    Jetpack_Compose_Weather_AppTheme {
-//        WeatherDisplay()
-//    }
-//}

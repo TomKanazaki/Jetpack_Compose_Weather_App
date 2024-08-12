@@ -8,6 +8,7 @@ import com.example.jetpack_compose_weather_app.api.NetworkResponse
 import com.example.jetpack_compose_weather_app.api.RetrofitInstance
 import com.example.jetpack_compose_weather_app.api.WeatherModel
 import kotlinx.coroutines.launch
+import java.io.IOException
 
 class WeatherViewModel: ViewModel() {
     private val weatherApi = RetrofitInstance.weatherApi
@@ -15,6 +16,10 @@ class WeatherViewModel: ViewModel() {
     val weatherResult: LiveData<NetworkResponse<WeatherModel>> = weather_Result
 
     fun fetchWeather(city: String) {
+        if (city.isBlank()) {
+            weather_Result.value = NetworkResponse.Error("Please enter a valid city name.")
+            return
+        }
         weather_Result.value = NetworkResponse.Loading
         viewModelScope.launch {
             try {
@@ -27,11 +32,15 @@ class WeatherViewModel: ViewModel() {
                     }
                 }else{
 //                Log.e("WeatherViewModel", "Error fetching weather: ${response.code()}")
-                    weather_Result.value = NetworkResponse.Error("Failed to fetch weather")
+                    weather_Result.value = NetworkResponse.Error("API request failed.")
                 }
             }catch (e: Exception) {
                 //Log.e("WeatherViewModel", "Error fetching weather", e)
-                weather_Result.value = NetworkResponse.Error("Failed to fetch weather")
+                if (e is IOException) {
+                    weather_Result.value = NetworkResponse.Error("Network error. Please check your internet connection.")
+                } else {
+                    weather_Result.value = NetworkResponse.Error("An unexpected error occurred. Please try again later.")
+                }
             }
         }
     }

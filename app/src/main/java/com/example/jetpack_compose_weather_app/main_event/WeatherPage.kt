@@ -1,5 +1,6 @@
 package com.example.jetpack_compose_weather_app.main_event
 
+
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -9,9 +10,12 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -29,7 +33,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
@@ -62,7 +68,14 @@ fun WeatherDisplay(viewModel: WeatherViewModel) {
                 modifier = Modifier.weight(1f),
                 value = city,
                 onValueChange = { city = it },
-                label = { Text(text = "Enter Location") }
+                label = { Text(text = "Enter Location") },
+                keyboardOptions =  KeyboardOptions(keyboardType = KeyboardType.Text),
+                keyboardActions = KeyboardActions(
+                    onSearch = {
+                        viewModel.fetchWeather(city)
+                        keyboardController?.hide()
+                    }
+                )
             )
             IconButton(onClick = {
                 viewModel.fetchWeather(city)
@@ -75,10 +88,19 @@ fun WeatherDisplay(viewModel: WeatherViewModel) {
 
         when(val result = weatherResult.value) {
             is NetworkResponse.Error -> {
-                Text(text = "Error: ${result.message}")
+                // Retry button
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(text = "Error: ${result.message}")
+                    Button(onClick = { viewModel.fetchWeather(city) }) {
+                        Text("Retry")
+                    }
+                }
             }
             NetworkResponse.Loading -> {
-                CircularProgressIndicator()
+                CircularProgressIndicator(modifier = Modifier.size(64.dp))
             }
             is NetworkResponse.Success -> {
                 WeatherDetail(data = result.data)
@@ -175,3 +197,8 @@ fun WeatherDetails(key: String, value: String) {
     }
 }
 
+@Preview(showBackground = true)
+@Composable
+fun WeatherDisplayPreview() {
+    WeatherDisplay(viewModel = WeatherViewModel())
+}
