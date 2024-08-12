@@ -1,4 +1,5 @@
-package com.example.jetpack_compose_weather_app.main_event
+package com.example.jetpack_compose_weather_app.view_model
+
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
@@ -6,7 +7,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.jetpack_compose_weather_app.api.Constant
 import com.example.jetpack_compose_weather_app.api.NetworkResponse
 import com.example.jetpack_compose_weather_app.api.RetrofitInstance
-import com.example.jetpack_compose_weather_app.api.WeatherModel
+import com.example.jetpack_compose_weather_app.data.WeatherModel
 import kotlinx.coroutines.launch
 import java.io.IOException
 
@@ -32,7 +33,7 @@ class WeatherViewModel: ViewModel() {
                     }
                 }else{
 //                Log.e("WeatherViewModel", "Error fetching weather: ${response.code()}")
-                    weather_Result.value = NetworkResponse.Error("API request failed.")
+                    weather_Result.value = NetworkResponse.Error("API request failed. Please check your city name.")
                 }
             }catch (e: Exception) {
                 //Log.e("WeatherViewModel", "Error fetching weather", e)

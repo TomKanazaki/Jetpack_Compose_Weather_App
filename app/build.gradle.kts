@@ -68,14 +68,12 @@ dependencies {
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
 
-    //retrofit, gson
+    // Add the retrofit dependencies
     implementation(libs.retrofit)
     implementation(libs.converter.gson)
 
-    //viewmodel, navigation
+    //viewmodel
     implementation(libs.androidx.lifecycle.viewmodel.ktx)
-    implementation(libs.androidx.navigation.compose)
-
     //live data
     implementation(libs.androidx.runtime.livedata)
 

@@ -10,8 +10,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Search
@@ -33,14 +31,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.example.jetpack_compose_weather_app.api.NetworkResponse
-import com.example.jetpack_compose_weather_app.api.WeatherModel
+import com.example.jetpack_compose_weather_app.data.WeatherModel
+import com.example.jetpack_compose_weather_app.view_model.WeatherViewModel
 
 @Composable
 fun WeatherDisplay(viewModel: WeatherViewModel) {
@@ -69,20 +67,19 @@ fun WeatherDisplay(viewModel: WeatherViewModel) {
                 value = city,
                 onValueChange = { city = it },
                 label = { Text(text = "Enter Location") },
-                keyboardOptions =  KeyboardOptions(keyboardType = KeyboardType.Text),
-                keyboardActions = KeyboardActions(
-                    onSearch = {
-                        viewModel.fetchWeather(city)
-                        keyboardController?.hide()
-                    }
-                )
+//                keyboardOptions =  KeyboardOptions(keyboardType = KeyboardType.Text),
+//                keyboardActions = KeyboardActions(
+//                    onSearch = {
+//                        viewModel.fetchWeather(city)
+//                        keyboardController?.hide()
+//                    }
+//                )
             )
             IconButton(onClick = {
                 viewModel.fetchWeather(city)
                 keyboardController?.hide()
             }) {
                 Icon(imageVector = Icons.Default.Search, contentDescription = "Search for location")
-
             }
         }
 
@@ -202,3 +199,6 @@ fun WeatherDetails(key: String, value: String) {
 fun WeatherDisplayPreview() {
     WeatherDisplay(viewModel = WeatherViewModel())
 }
+
+
+///

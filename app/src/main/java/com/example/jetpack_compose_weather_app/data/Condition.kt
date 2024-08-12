@@ -1,6 +1,4 @@
-package com.example.jetpack_compose_weather_app.api
-
-
+package com.example.jetpack_compose_weather_app.data
 
 data class Condition(
     val code: String,
