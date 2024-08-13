@@ -10,6 +10,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Search
@@ -39,6 +42,27 @@ import coil.compose.AsyncImage
 import com.example.jetpack_compose_weather_app.api.NetworkResponse
 import com.example.jetpack_compose_weather_app.data.WeatherModel
 import com.example.jetpack_compose_weather_app.view_model.WeatherViewModel
+//import androidx.compose.ui.graphics.vector.ImageVector
+//import androidx.compose.foundation.shape.RoundedCornerShape
+//import androidx.compose.material3.HorizontalDivider
+//import com.example.jetpack_compose_weather_app.R
+import android.Manifest
+import android.annotation.SuppressLint
+import android.content.Context
+import android.content.pm.PackageManager
+import android.location.Geocoder
+import android.location.Location
+import androidx.compose.runtime.*
+import androidx.compose.ui.platform.LocalContext
+import androidx.core.app.ActivityCompat
+import com.google.accompanist.permissions.ExperimentalPermissionsApi
+import com.google.accompanist.permissions.rememberPermissionState
+import com.google.android.gms.location.FusedLocationProviderClient
+import com.google.android.gms.location.LocationServices
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import java.util.*
 
 @Composable
 fun WeatherDisplay(viewModel: WeatherViewModel) {
@@ -48,13 +72,16 @@ fun WeatherDisplay(viewModel: WeatherViewModel) {
 
     val keyboardController = LocalSoftwareKeyboardController.current
 
+    //observe weatherResult state from the viewModel
     val weatherResult = viewModel.weatherResult.observeAsState()
 
-    Column (        modifier = Modifier
-            .fillMaxWidth()
-            .padding(8.dp),
+    Column (modifier = Modifier
+        .fillMaxWidth()
+        .padding(8.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ){
+        Spacer(modifier = Modifier.height(16.dp))
+
         Row (
             modifier = Modifier
                 .fillMaxWidth()
@@ -84,8 +111,8 @@ fun WeatherDisplay(viewModel: WeatherViewModel) {
         }
 
         when(val result = weatherResult.value) {
+            // If these is error, the retry button will show up below the error message
             is NetworkResponse.Error -> {
-                // Retry button
                 Column(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalAlignment = Alignment.CenterHorizontally
@@ -96,14 +123,18 @@ fun WeatherDisplay(viewModel: WeatherViewModel) {
                     }
                 }
             }
+
+            // Display the circular progress indicator if the result is loading
             NetworkResponse.Loading -> {
                 CircularProgressIndicator(modifier = Modifier.size(64.dp))
             }
+
+            // Display the weather details if the result is successful
             is NetworkResponse.Success -> {
                 WeatherDetail(data = result.data)
             }
+            // If the result is null, do nothing
             null -> {}
-
         }
     }
 }
@@ -150,49 +181,181 @@ fun WeatherDetail(data: WeatherModel) {
             color =  Color.Gray
         )
 
-        Spacer(modifier = Modifier.height(16.dp))
-        Card{
-            Column(
-                modifier = Modifier.fillMaxWidth()
-            ){
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceAround
-                ) {
-                    WeatherDetails("Feels like", "${data.current.feelslike_c} °C")
-                    WeatherDetails("Wind speed", "${data.current.wind_kph} km/h")
-                }
+        Spacer(modifier = Modifier.height(18.dp))
 
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceAround
-                ) {
-                    WeatherDetails("Humidity", "${data.current.humidity}%")
-                    WeatherDetails("UV", data.current.uv)
-                }
+        val detailsList = listOf(
+            Pair("Feels like", "${data.current.feelslike_c} °C"),
+            Pair("Wind speed", "${data.current.wind_kph} km/h"),
+            Pair("Humidity", "${data.current.humidity}%"),
+            Pair("UV", data.current.uv),
+            Pair("Visibility", "${data.current.vis_km} km"),
+            Pair("Air pressure", "${data.current.pressure_mb} mb")
+        )
 
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceAround
-                ) {
-                    WeatherDetails("Visibility", "${data.current.vis_km} km")
-                    WeatherDetails("Air pressure", "${data.current.pressure_mb} mb")
-                }
-
-                //... add more weather details as needed
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(2),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            modifier = Modifier.padding(horizontal = 4.dp)
+        ) {
+            items(detailsList) { detail ->
+                WeatherDetailItem(label = detail.first, value = detail.second)
             }
         }
+
+//        Spacer(modifier = Modifier.height(16.dp))
+//
+//        // Sunrise & Sunset Card
+//        Card(
+//            modifier = Modifier
+//                .fillMaxWidth()
+//                .padding(horizontal = 8.dp),
+//            shape = RoundedCornerShape(12.dp)
+//        ) {
+//            Column(
+//                modifier = Modifier
+//                    .fillMaxWidth()
+//                    .padding(16.dp)
+//            ) {
+//                SunriseSunsetItem(
+//                    icon = R.drawable.sunrise, // Replace with a suitable sunrise icon
+//                    time = data.sunrise ?: "--:--" // Replace with actual sunrise time from data
+//                )
+//                HorizontalDivider(
+//                    modifier = Modifier.padding(vertical = 8.dp),
+//                    color = Color.LightGray
+//                )
+//                SunriseSunsetItem(
+//                    icon = R.drawable.sunset, // Replace with a suitable sunset icon
+//                    time = data.sunset ?: "--:--" // Replace with actual sunset time from data
+//                )
+//            }
+//        }
     }
 }
 
 @Composable
-fun WeatherDetails(key: String, value: String) {
-    Column (modifier = Modifier.padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally){
-        Text(text = value, fontSize = 24.sp, fontWeight = FontWeight.Bold)
-        Text(text = key, fontWeight = FontWeight.SemiBold, color = Color.Gray)
+fun WeatherDetailItem(label: String, value: String) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(4.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(text = label, fontSize = 14.sp, color = Color.Gray)
+            Text(text = value, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+        }
     }
 }
+
+//@Composable
+//fun SunriseSunsetItem(icon: ImageVector, time: String) {
+//    Row(
+//        modifier = Modifier.fillMaxWidth(),
+//        verticalAlignment = Alignment.CenterVertically
+//    ) {
+//        Icon(
+//            imageVector = icon,
+//            contentDescription = null,
+//            modifier = Modifier.size(24.dp)
+//        )
+//        Spacer(modifier = Modifier.width(8.dp))
+//        Text(text = time, fontSize = 16.sp)
+//    }
+//}
+
+//@SuppressLint("PermissionAPI")
+//@OptIn(ExperimentalPermissionsApi::class)
+//@Composable
+//fun WeatherScreen() {
+//    val context = LocalContext.current
+//    var userLocation by remember { mutableStateOf<String?>(null) }
+//    val locationPermissionState = rememberPermissionState(
+//        Manifest.permission.ACCESS_COARSE_LOCATION
+//    )
+//
+//    val fusedLocationClient = LocationServices.getFusedLocationProviderClient(context)
+//
+//    LaunchedEffect(key1 = locationPermissionState.hasPermission) {
+//        if (locationPermissionState.hasPermission) {
+//            // Get location using addOnSuccessListener
+//            if (ActivityCompat.checkSelfPermission(
+//                    this,
+//                    Manifest.permission.ACCESS_FINE_LOCATION
+//                ) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(
+//                    this,
+//                    Manifest.permission.ACCESS_COARSE_LOCATION
+//                ) != PackageManager.PERMISSION_GRANTED
+//            ) {
+//                // TODO: Consider calling
+//                //    ActivityCompat#requestPermissions
+//                // here to request the missing permissions, and then overriding
+//                //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
+//                //                                          int[] grantResults)
+//                // to handle the case where the user grants the permission. See the documentation
+//                // for ActivityCompat#requestPermissions for more details.
+//                return@LaunchedEffect
+//            }
+//            fusedLocationClient.lastLocation.addOnSuccessListener { location: Location? ->
+//                location?.let {
+//                    val address = getAddressFromLocation(
+//                        context,
+//                        it.latitude,
+//                        it.longitude
+//                    )
+//                    userLocation = address // Update the userLocation state
+//                }
+//            }
+//        } else {
+//            locationPermissionState.launchPermissionRequest()
+//        }
+//    }
+//
+//    // ... Rest of your WeatherScreen Composable
+//    Text(text = "Your Location: ${userLocation ?: "Loading..."}")
+//    // ...
+//}
+//
+//@SuppressLint("MissingPermission")
+//fun getUserLocation(context: Context, fusedLocationClient: FusedLocationProviderClient, onLocationFetched: (String) -> Unit) {
+//    CoroutineScope(Dispatchers.IO).launch {
+//        try {
+//            val location: Location? = fusedLocationClient.lastLocation.await()
+//            location?.let {
+//                val address = getAddressFromLocation(
+//                    context,
+//                    it.latitude,
+//                    it.longitude
+//                )
+//                onLocationFetched(address)
+//            }
+//        } catch (e: Exception) {
+//            // Handle location retrieval error
+//            e.printStackTrace()
+//        }
+//    }
+//}
+//
+//fun getAddressFromLocation(context: Context, latitude: Double, longitude: Double): String {
+//    val geocoder = Geocoder(context, Locale.getDefault())
+//    try {
+//        val addresses = geocoder.getFromLocation(latitude, longitude, 1)
+//        if (!addresses.isNullOrEmpty()) {
+//            val address = addresses[0]
+//            val city = address.locality ?: ""
+//            val country = address.countryName ?: ""
+//            return "$city, $country"
+//        }
+//    } catch (e: Exception) {
+//        e.printStackTrace()
+//    }
+//    return ""
+//}
 
 @Preview(showBackground = true)
 @Composable
@@ -201,4 +364,3 @@ fun WeatherDisplayPreview() {
 }
 
 
-///

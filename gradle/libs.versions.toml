@@ -1,4 +1,5 @@
 [versions]
+accompanistPermissions = "0.31.2-alpha"
 agp = "8.5.0"
 coilCompose = "2.5.0"
 converterGson = "2.11.0"
@@ -12,11 +13,13 @@ activityCompose = "1.9.0"
 composeBom = "2024.04.01"
 lifecycleViewmodelKtx = "2.8.4"
 navigationCompose = "2.7.7"
+playServicesLocation = "21.3.0"
 retrofit = "2.11.0"
 runtimeLivedata = "1.6.8"
 core = "1.17.1"
 
 [libraries]
+accompanist-permissions = { module = "com.google.accompanist:accompanist-permissions", version.ref = "accompanistPermissions" }
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 androidx-lifecycle-viewmodel-ktx = { module = "androidx.lifecycle:lifecycle-viewmodel-ktx", version.ref = "lifecycleViewmodelKtx" }
 androidx-navigation-compose = { module = "androidx.navigation:navigation-compose", version.ref = "navigationCompose" }
@@ -35,6 +38,7 @@ androidx-ui-tooling-preview = { group = "androidx.compose.ui", name = "ui-toolin
 androidx-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-test-manifest" }
 androidx-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit4" }
 androidx-material3 = { group = "androidx.compose.material3", name = "material3" }
+play-services-location = { module = "com.google.android.gms:play-services-location", version.ref = "playServicesLocation" }
 retrofit = { module = "com.squareup.retrofit2:retrofit", version.ref = "retrofit" }
 androidx-runtime-livedata = { group = "androidx.compose.runtime", name = "runtime-livedata", version.ref = "runtimeLivedata" }
 core = { group = "com.google.ar.sceneform", name = "core", version.ref = "core" }

@@ -9,6 +9,7 @@ object RetrofitInstance {
     private fun getInstance(): Retrofit {
         return Retrofit.Builder()
             .baseUrl(BASE_URL)
+            //tell retrofit how to parse the response from JSON to Kotlin with GSON
             .addConverterFactory(GsonConverterFactory.create())
             .build()
     }
