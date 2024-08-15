@@ -5,6 +5,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.lifecycle.ViewModelProvider
+import com.example.jetpack_compose_weather_app.data.WeatherModel
 import com.example.jetpack_compose_weather_app.view_model.WeatherViewModel
 
 class MainActivity : ComponentActivity() {

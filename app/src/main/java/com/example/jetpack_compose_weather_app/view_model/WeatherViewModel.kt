@@ -1,5 +1,6 @@
 package com.example.jetpack_compose_weather_app.view_model
 
+import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
@@ -26,17 +27,17 @@ class WeatherViewModel: ViewModel() {
             try {
                 val response = weatherApi.getWeather(Constant.apiKey, city)
                 if (response.isSuccessful) {
-//                val weatherResponse = response.body()
-//                Log.d("WeatherViewModel", "Weather response: $weatherResponse")
+                val weatherResponse = response.body()
+                Log.d("WeatherViewModel", "Weather response: $weatherResponse")
                     response.body()?.let {
                         weather_Result.value = NetworkResponse.Success(it)
                     }
                 }else{
-//                Log.e("WeatherViewModel", "Error fetching weather: ${response.code()}")
+                Log.e("WeatherViewModel", "Error fetching weather: ${response.code()}")
                     weather_Result.value = NetworkResponse.Error("API request failed. Please check your city name.")
                 }
             }catch (e: Exception) {
-                //Log.e("WeatherViewModel", "Error fetching weather", e)
+                Log.e("WeatherViewModel", "Error fetching weather", e)
                 if (e is IOException) {
                     weather_Result.value = NetworkResponse.Error("Network error. Please check your internet connection.")
                 } else {

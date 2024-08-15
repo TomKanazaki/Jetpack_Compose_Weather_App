@@ -1,6 +1,7 @@
 package com.example.jetpack_compose_weather_app.main_event
 
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -35,7 +36,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
@@ -46,23 +46,7 @@ import com.example.jetpack_compose_weather_app.view_model.WeatherViewModel
 //import androidx.compose.foundation.shape.RoundedCornerShape
 //import androidx.compose.material3.HorizontalDivider
 //import com.example.jetpack_compose_weather_app.R
-import android.Manifest
-import android.annotation.SuppressLint
-import android.content.Context
-import android.content.pm.PackageManager
-import android.location.Geocoder
-import android.location.Location
-import androidx.compose.runtime.*
-import androidx.compose.ui.platform.LocalContext
-import androidx.core.app.ActivityCompat
-import com.google.accompanist.permissions.ExperimentalPermissionsApi
-import com.google.accompanist.permissions.rememberPermissionState
-import com.google.android.gms.location.FusedLocationProviderClient
-import com.google.android.gms.location.LocationServices
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import java.util.*
+
 
 @Composable
 fun WeatherDisplay(viewModel: WeatherViewModel) {
@@ -131,6 +115,7 @@ fun WeatherDisplay(viewModel: WeatherViewModel) {
 
             // Display the weather details if the result is successful
             is NetworkResponse.Success -> {
+
                 WeatherDetail(data = result.data)
             }
             // If the result is null, do nothing
@@ -141,6 +126,7 @@ fun WeatherDisplay(viewModel: WeatherViewModel) {
 
 @Composable
 fun WeatherDetail(data: WeatherModel) {
+    WeatherBackground(condition = data.current.condition.text)
     Column (
         modifier = Modifier
             .fillMaxWidth()
@@ -253,6 +239,35 @@ fun WeatherDetailItem(label: String, value: String) {
     }
 }
 
+@Composable
+fun WeatherBackground(condition: String) {
+    val sunnyBackgroundColor = Color(0xFF00BCD4) // Light blue
+    val cloudyBackgroundColor = Color(0xFF757575) // Gray
+    val rainyBackgroundColor = Color(0xFF546E7A) // Blue gray
+
+    // Set the background color based on the weather condition
+    val backgroundColor = when {
+        condition.contains("sun", ignoreCase = true) -> sunnyBackgroundColor
+        condition.contains("cloud", ignoreCase = true) -> cloudyBackgroundColor
+        condition.contains("rain", ignoreCase = true) -> rainyBackgroundColor
+        else -> Color.LightGray // Default background color
+    }
+
+    // Apply the background color to the entire screen
+    Column(modifier = Modifier
+        .fillMaxWidth()
+        .padding(8.dp)) {
+        Spacer(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(0.dp) // Set height to 0 to avoid taking up space
+                .background(backgroundColor)
+        )
+    }
+}
+
+
+
 //@Composable
 //fun SunriseSunsetItem(icon: ImageVector, time: String) {
 //    Row(
@@ -269,98 +284,6 @@ fun WeatherDetailItem(label: String, value: String) {
 //    }
 //}
 
-//@SuppressLint("PermissionAPI")
-//@OptIn(ExperimentalPermissionsApi::class)
-//@Composable
-//fun WeatherScreen() {
-//    val context = LocalContext.current
-//    var userLocation by remember { mutableStateOf<String?>(null) }
-//    val locationPermissionState = rememberPermissionState(
-//        Manifest.permission.ACCESS_COARSE_LOCATION
-//    )
-//
-//    val fusedLocationClient = LocationServices.getFusedLocationProviderClient(context)
-//
-//    LaunchedEffect(key1 = locationPermissionState.hasPermission) {
-//        if (locationPermissionState.hasPermission) {
-//            // Get location using addOnSuccessListener
-//            if (ActivityCompat.checkSelfPermission(
-//                    this,
-//                    Manifest.permission.ACCESS_FINE_LOCATION
-//                ) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(
-//                    this,
-//                    Manifest.permission.ACCESS_COARSE_LOCATION
-//                ) != PackageManager.PERMISSION_GRANTED
-//            ) {
-//                // TODO: Consider calling
-//                //    ActivityCompat#requestPermissions
-//                // here to request the missing permissions, and then overriding
-//                //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
-//                //                                          int[] grantResults)
-//                // to handle the case where the user grants the permission. See the documentation
-//                // for ActivityCompat#requestPermissions for more details.
-//                return@LaunchedEffect
-//            }
-//            fusedLocationClient.lastLocation.addOnSuccessListener { location: Location? ->
-//                location?.let {
-//                    val address = getAddressFromLocation(
-//                        context,
-//                        it.latitude,
-//                        it.longitude
-//                    )
-//                    userLocation = address // Update the userLocation state
-//                }
-//            }
-//        } else {
-//            locationPermissionState.launchPermissionRequest()
-//        }
-//    }
-//
-//    // ... Rest of your WeatherScreen Composable
-//    Text(text = "Your Location: ${userLocation ?: "Loading..."}")
-//    // ...
-//}
-//
-//@SuppressLint("MissingPermission")
-//fun getUserLocation(context: Context, fusedLocationClient: FusedLocationProviderClient, onLocationFetched: (String) -> Unit) {
-//    CoroutineScope(Dispatchers.IO).launch {
-//        try {
-//            val location: Location? = fusedLocationClient.lastLocation.await()
-//            location?.let {
-//                val address = getAddressFromLocation(
-//                    context,
-//                    it.latitude,
-//                    it.longitude
-//                )
-//                onLocationFetched(address)
-//            }
-//        } catch (e: Exception) {
-//            // Handle location retrieval error
-//            e.printStackTrace()
-//        }
-//    }
-//}
-//
-//fun getAddressFromLocation(context: Context, latitude: Double, longitude: Double): String {
-//    val geocoder = Geocoder(context, Locale.getDefault())
-//    try {
-//        val addresses = geocoder.getFromLocation(latitude, longitude, 1)
-//        if (!addresses.isNullOrEmpty()) {
-//            val address = addresses[0]
-//            val city = address.locality ?: ""
-//            val country = address.countryName ?: ""
-//            return "$city, $country"
-//        }
-//    } catch (e: Exception) {
-//        e.printStackTrace()
-//    }
-//    return ""
-//}
 
-@Preview(showBackground = true)
-@Composable
-fun WeatherDisplayPreview() {
-    WeatherDisplay(viewModel = WeatherViewModel())
-}
 
 
