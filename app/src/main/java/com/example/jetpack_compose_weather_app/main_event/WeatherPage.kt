@@ -19,6 +19,7 @@ import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -41,6 +42,7 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.example.jetpack_compose_weather_app.api.NetworkResponse
 import com.example.jetpack_compose_weather_app.data.WeatherModel
+import com.example.jetpack_compose_weather_app.data.weatherColors
 import com.example.jetpack_compose_weather_app.view_model.WeatherViewModel
 //import androidx.compose.ui.graphics.vector.ImageVector
 //import androidx.compose.foundation.shape.RoundedCornerShape
@@ -115,6 +117,8 @@ fun WeatherDisplay(viewModel: WeatherViewModel) {
 
             // Display the weather details if the result is successful
             is NetworkResponse.Success -> {
+                //WeatherBackground()
+                /*ADD HERE*/
 
                 WeatherDetail(data = result.data)
             }
@@ -126,11 +130,12 @@ fun WeatherDisplay(viewModel: WeatherViewModel) {
 
 @Composable
 fun WeatherDetail(data: WeatherModel) {
-    WeatherBackground(condition = data.current.condition.text)
+    val backgroundColor = weatherColors[data.current.condition.code] ?: Color.LightGray //Default Light Gray if can't fetch for colors
     Column (
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 8.dp),
+            .padding(vertical = 8.dp)
+            .background(backgroundColor),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Row(
@@ -166,6 +171,18 @@ fun WeatherDetail(data: WeatherModel) {
             textAlign = TextAlign.Center,
             color =  Color.Gray
         )
+
+        Spacer(modifier = Modifier.height(18.dp))
+
+//        Text(text = data.location.localtime,
+//            fontSize = 15.sp,
+//            textAlign = TextAlign.Center,
+//            )
+//
+//        Text(text = data.current.condition.code.toString(),
+//            fontSize = 15.sp,
+//            textAlign = TextAlign.Center,
+//        )
 
         Spacer(modifier = Modifier.height(18.dp))
 
@@ -225,7 +242,9 @@ fun WeatherDetailItem(label: String, value: String) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(4.dp)
+            .padding(4.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Column(
             modifier = Modifier
@@ -239,32 +258,24 @@ fun WeatherDetailItem(label: String, value: String) {
     }
 }
 
-@Composable
-fun WeatherBackground(condition: String) {
-    val sunnyBackgroundColor = Color(0xFF00BCD4) // Light blue
-    val cloudyBackgroundColor = Color(0xFF757575) // Gray
-    val rainyBackgroundColor = Color(0xFF546E7A) // Blue gray
-
-    // Set the background color based on the weather condition
-    val backgroundColor = when {
-        condition.contains("sun", ignoreCase = true) -> sunnyBackgroundColor
-        condition.contains("cloud", ignoreCase = true) -> cloudyBackgroundColor
-        condition.contains("rain", ignoreCase = true) -> rainyBackgroundColor
-        else -> Color.LightGray // Default background color
-    }
-
-    // Apply the background color to the entire screen
-    Column(modifier = Modifier
-        .fillMaxWidth()
-        .padding(8.dp)) {
-        Spacer(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(0.dp) // Set height to 0 to avoid taking up space
-                .background(backgroundColor)
-        )
-    }
-}
+//@Composable
+//fun WeatherBackground() {
+//    val backgroundColor = remember {
+//        weatherColors
+//    }
+//
+//    // Apply the background color to the entire screen
+//    Column(modifier = Modifier
+//        .fillMaxWidth()
+//        .padding(8.dp)) {
+//        Spacer(
+//            modifier = Modifier
+//                .fillMaxWidth()
+//                .height(0.dp)
+//                .background(color = backgroundColor as Color)
+//        )
+//    }
+//}
 
 
 
