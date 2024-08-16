@@ -36,9 +36,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
@@ -63,12 +65,19 @@ fun WeatherDisplay(viewModel: WeatherViewModel) {
     //observe weatherResult state from the viewModel
     val weatherResult = viewModel.weatherResult.observeAsState()
 
+    val backgroundColor = when(val result = weatherResult.value) {
+        is NetworkResponse.Success -> weatherColors[result.data.current.condition.code] ?: Color.LightGray
+        is NetworkResponse.Error -> Color.LightGray
+        else -> Color.LightGray
+    } //Default Light Gray if can't fetch for colors
+
     Column (modifier = Modifier
         .fillMaxWidth()
-        .padding(8.dp),
+        .padding(8.dp)
+        .background(backgroundColor),
         horizontalAlignment = Alignment.CenterHorizontally
     ){
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(30.dp))
 
         Row (
             modifier = Modifier
@@ -119,9 +128,6 @@ fun WeatherDisplay(viewModel: WeatherViewModel) {
 
             // Display the weather details if the result is successful
             is NetworkResponse.Success -> {
-                //WeatherBackground()
-                /*ADD HERE*/
-
                 WeatherDetail(data = result.data)
             }
             // If the result is null, do nothing
@@ -133,11 +139,14 @@ fun WeatherDisplay(viewModel: WeatherViewModel) {
 @Composable
 fun WeatherDetail(data: WeatherModel) {
     val backgroundColor = weatherColors[data.current.condition.code] ?: Color.LightGray //Default Light Gray if can't fetch for colors
+
+    val textColor = if (backgroundColor.luminance() > 0.5) Color.Black else Color.White
+
     Column (
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 8.dp)
-            .background(backgroundColor),
+            .padding(vertical = 8.dp),
+            //.background(backgroundColor),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Row(
@@ -150,8 +159,14 @@ fun WeatherDetail(data: WeatherModel) {
                 contentDescription = "Location icon",
                 modifier = Modifier.size(40.dp)
             )
-            Text(text = data.location.name, fontSize = 30.sp)
-            Spacer(modifier = Modifier.width(8.dp) )
+            Text(
+                modifier = Modifier.weight(1f),
+                text = data.location.name,
+                fontSize = 30.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Spacer(modifier = Modifier.width(8.dp))
             Text(text = data.location.country, fontSize = 18.sp, color = Color.Gray)
         }
 
@@ -171,7 +186,7 @@ fun WeatherDetail(data: WeatherModel) {
         Text(text = data.current.condition.text,
             fontSize = 20.sp,
             textAlign = TextAlign.Center,
-            color =  Color.Gray
+            color =  textColor
         )
 
         Spacer(modifier = Modifier.height(18.dp))
@@ -204,7 +219,7 @@ fun WeatherDetail(data: WeatherModel) {
             modifier = Modifier.padding(horizontal = 4.dp)
         ) {
             items(detailsList) { detail ->
-                WeatherDetailItem(label = detail.first, value = detail.second)
+                WeatherDetailItem(label = detail.first, value = detail.second, textColor = textColor)
             }
         }
 
@@ -240,12 +255,12 @@ fun WeatherDetail(data: WeatherModel) {
 }
 
 @Composable
-fun WeatherDetailItem(label: String, value: String) {
+fun WeatherDetailItem(label: String, value: String, textColor: Color) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .padding(4.dp)
-            .border(1.dp, Color.Gray, shape = RoundedCornerShape(8.dp)),
+            .border(2.dp, Color.Gray, shape = RoundedCornerShape(8.dp)),
         colors = CardDefaults.cardColors(containerColor = Color.Transparent),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
@@ -255,8 +270,8 @@ fun WeatherDetailItem(label: String, value: String) {
                 .padding(8.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text(text = label, fontSize = 14.sp, color = Color.Gray)
-            Text(text = value, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+            Text(text = label, fontSize = 14.sp, color = textColor)
+            Text(text = value, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = textColor)
         }
     }
 }
