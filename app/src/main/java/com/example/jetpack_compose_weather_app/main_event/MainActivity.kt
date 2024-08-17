@@ -32,7 +32,11 @@ fun MainScreen(viewModel: WeatherViewModel) {
     var currentCity by remember { mutableStateOf("") }
 
     if (showCityList && selectedCountry != null) {
-        CityListPage(viewModel = viewModel,country = selectedCountry!!, initialCity = currentCity) { showCityList = false }
+        CityListPage(
+            viewModel = viewModel,
+            initialCity = currentCity,
+            onClose = { showCityList = false }
+        )
     } else {
         WeatherDisplay(viewModel = viewModel) { country, city ->
             selectedCountry = country
@@ -41,4 +45,3 @@ fun MainScreen(viewModel: WeatherViewModel) {
 
         }
     }}
-
