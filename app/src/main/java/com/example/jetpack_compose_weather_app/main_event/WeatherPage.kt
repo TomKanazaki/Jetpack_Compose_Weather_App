@@ -71,7 +71,7 @@ import com.example.jetpack_compose_weather_app.view_model.WeatherViewModel
 
 
 @Composable
-fun WeatherDisplay(viewModel: WeatherViewModel, onCountryClick: (String) -> Unit) {
+fun WeatherDisplay(viewModel: WeatherViewModel, onCountryClick: (String, String) -> Unit) {
     var city by remember { mutableStateOf("") }
 
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -127,8 +127,13 @@ fun WeatherDisplay(viewModel: WeatherViewModel, onCountryClick: (String) -> Unit
 
         var showCityList by remember { mutableStateOf(false) }
         val selectedCountry by remember { mutableStateOf<String?>(null) }
+        var currentCity by remember { mutableStateOf("") }
         if (showCityList) {
-            CityListPage(country = selectedCountry!!) { showCityList = false }
+            CityListPage(
+                viewModel = viewModel,
+                country = selectedCountry!!,
+                initialCity = currentCity
+            ) { showCityList = false }
         } else {
             when (val result = weatherResult.value) {
                 // If these is error, the retry button will show up below the error message
@@ -151,7 +156,10 @@ fun WeatherDisplay(viewModel: WeatherViewModel, onCountryClick: (String) -> Unit
 
                 // Display the weather details if the result is successful
                 is NetworkResponse.Success -> {
-                    WeatherDetail(data = result.data, isCelsius = isCelsius, onCountryClick = onCountryClick)
+                    currentCity = result.data.location.name
+                    WeatherDetail(data = result.data, isCelsius = isCelsius) {
+                        country -> onCountryClick(country, currentCity)
+                    }
                     Button(onClick = { isCelsius = !isCelsius }) {
                         Text(if (isCelsius) "Switch to Imperial" else "Switch to Metric")
                     }
@@ -159,44 +167,73 @@ fun WeatherDisplay(viewModel: WeatherViewModel, onCountryClick: (String) -> Unit
                 // If the result is null, do nothing
                 null -> {}
             }
-
         }
-
     }
 }
 
 @SuppressLint("MutableCollectionMutableState")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CityListPage(country: String, onClose: () -> Unit) {
-    val cityList by remember { mutableStateOf(mutableStateListOf("")) }
+fun CityListPage(
+    viewModel: WeatherViewModel,
+    country: String,
+    initialCity: String,
+    onClose: () -> Unit
+) {
+    val cityList by remember { mutableStateOf(mutableStateListOf(initialCity)) }
     var showDialog by remember { mutableStateOf(false) }
     var selectedCity by remember { mutableStateOf("") }
+    var weatherData by remember { mutableStateOf<Map<String, WeatherModel>>(emptyMap()) }
+    val weatherResult = viewModel.weatherResult.observeAsState()
+
+    LaunchedEffect(cityList) {
+        val newWeatherData = mutableMapOf<String, WeatherModel>()
+        for (city in cityList) {
+            when (val result = weatherResult.value) {
+                is NetworkResponse.Success -> {
+                    newWeatherData[city] = result.data
+                }
+                else -> {}
+            }
+        }
+        weatherData = newWeatherData
+    }
 
     Scaffold(
         topBar = {
-            TopAppBar(title = { Text(text = "Manage cities in $country") },
-                navigationIcon = {IconButton(onClick = onClose) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                }
+            TopAppBar(
+                title = { Text(text= "Manage cities in $country") },
+                navigationIcon = {
+                    IconButton(onClick = onClose) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
                 }
             )
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = { cityList.add("New City ${cityList.size + 1}\"") }) {
+            FloatingActionButton(onClick = {
+                cityList.add("New City ${cityList.size + 1}")
+            }) {
                 Icon(Icons.Filled.Add, contentDescription = "Add City")
             }
         }
     ) { paddingValues ->
         LazyColumn(modifier = Modifier.padding(paddingValues)) {
             items(cityList) { city ->
-                CityCard(city = city) { action, cityName ->
-                    selectedCity = cityName.toString()
-                    if (action == "edit") {
-                        // Handle edit action
-                    } else if (action == "delete") {
-                        showDialog = true
-                    }
+                val data = weatherData[city]
+                if (data != null) {
+                    CityCard(
+                        city = city,
+                        onAction = { action, cityName ->
+                            selectedCity = cityName
+                            if (action == "edit") {
+                                // Handle edit action
+                            } else if (action == "delete") {
+                                showDialog = true
+                            }
+                        },
+                        data = data
+                    )
                 }
             }
         }
@@ -220,7 +257,6 @@ fun CityListPage(country: String, onClose: () -> Unit) {
                 }
             )
         }
-
     }
 }
 
@@ -243,10 +279,6 @@ fun CityCard(city: String, onAction: (String, String) -> Unit, data: WeatherMode
                     Text(text = city, fontSize = 18.sp)
                     Spacer(modifier = Modifier.width(4.dp))
                     Icon(Icons.Filled.LocationOn, contentDescription = "Location", modifier = Modifier.size(16.dp))
-                }
-
-                LaunchedEffect(city) {
-                    val weatherData = data.location.name
                 }
 
                 Text(text = "${data.current.temp_c}°C", fontSize = 24.sp, fontWeight = FontWeight.Bold)

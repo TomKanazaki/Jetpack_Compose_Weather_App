@@ -29,13 +29,16 @@ class MainActivity : ComponentActivity() {
 fun MainScreen(viewModel: WeatherViewModel) {
     var showCityList by remember { mutableStateOf(false) }
     var selectedCountry by remember { mutableStateOf<String?>(null) }
+    var currentCity by remember { mutableStateOf("") }
 
     if (showCityList && selectedCountry != null) {
-        CityListPage(country = selectedCountry!!) { showCityList = false }
+        CityListPage(viewModel = viewModel,country = selectedCountry!!, initialCity = currentCity) { showCityList = false }
     } else {
-        WeatherDisplay(viewModel = viewModel) { country ->
+        WeatherDisplay(viewModel = viewModel) { country, city ->
             selectedCountry = country
+            currentCity = city
             showCityList = true
+
         }
     }}
 
