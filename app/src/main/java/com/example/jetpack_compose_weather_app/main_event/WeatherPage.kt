@@ -1,8 +1,10 @@
 package com.example.jetpack_compose_weather_app.main_event
 
 
+import android.annotation.SuppressLint
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -11,24 +13,39 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -54,7 +71,7 @@ import com.example.jetpack_compose_weather_app.view_model.WeatherViewModel
 
 
 @Composable
-fun WeatherDisplay(viewModel: WeatherViewModel) {
+fun WeatherDisplay(viewModel: WeatherViewModel, onCountryClick: (String) -> Unit) {
     var city by remember { mutableStateOf("") }
 
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -108,41 +125,164 @@ fun WeatherDisplay(viewModel: WeatherViewModel) {
             }
         }
 
-        when(val result = weatherResult.value) {
-            // If these is error, the retry button will show up below the error message
-            is NetworkResponse.Error -> {
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text(text = "Error: ${result.message}")
-                    Button(onClick = { viewModel.fetchWeather(city) }) {
-                        Text("Retry")
+        var showCityList by remember { mutableStateOf(false) }
+        val selectedCountry by remember { mutableStateOf<String?>(null) }
+        if (showCityList) {
+            CityListPage(country = selectedCountry!!) { showCityList = false }
+        } else {
+            when (val result = weatherResult.value) {
+                // If these is error, the retry button will show up below the error message
+                is NetworkResponse.Error -> {
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(text = "Error: ${result.message}")
+                        Button(onClick = { viewModel.fetchWeather(city) }) {
+                            Text("Retry")
+                        }
+                    }
+                }
+
+                // Display the circular progress indicator if the result is loading
+                NetworkResponse.Loading -> {
+                    CircularProgressIndicator(modifier = Modifier.size(64.dp))
+                }
+
+                // Display the weather details if the result is successful
+                is NetworkResponse.Success -> {
+                    WeatherDetail(data = result.data, isCelsius = isCelsius, onCountryClick = onCountryClick)
+                    Button(onClick = { isCelsius = !isCelsius }) {
+                        Text(if (isCelsius) "Switch to Imperial" else "Switch to Metric")
+                    }
+                }
+                // If the result is null, do nothing
+                null -> {}
+            }
+
+        }
+
+    }
+}
+
+@SuppressLint("MutableCollectionMutableState")
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun CityListPage(country: String, onClose: () -> Unit) {
+    val cityList by remember { mutableStateOf(mutableStateListOf("")) }
+    var showDialog by remember { mutableStateOf(false) }
+    var selectedCity by remember { mutableStateOf("") }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(title = { Text(text = "Manage cities in $country") },
+                navigationIcon = {IconButton(onClick = onClose) {
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                }
+                }
+            )
+        },
+        floatingActionButton = {
+            FloatingActionButton(onClick = { cityList.add("New City ${cityList.size + 1}\"") }) {
+                Icon(Icons.Filled.Add, contentDescription = "Add City")
+            }
+        }
+    ) { paddingValues ->
+        LazyColumn(modifier = Modifier.padding(paddingValues)) {
+            items(cityList) { city ->
+                CityCard(city = city) { action, cityName ->
+                    selectedCity = cityName.toString()
+                    if (action == "edit") {
+                        // Handle edit action
+                    } else if (action == "delete") {
+                        showDialog = true
                     }
                 }
             }
-
-            // Display the circular progress indicator if the result is loading
-            NetworkResponse.Loading -> {
-                CircularProgressIndicator(modifier = Modifier.size(64.dp))
-            }
-
-            // Display the weather details if the result is successful
-            is NetworkResponse.Success -> {
-                WeatherDetail(data = result.data, isCelsius = isCelsius)
-                Button(onClick = { isCelsius = !isCelsius }) {
-                    Text(if (isCelsius) "Switch to Imperial" else "Switch to Metric")
+        }
+        if (showDialog) {
+            AlertDialog(
+                onDismissRequest = { showDialog = false },
+                title = { Text("Confirm Deletion") },
+                text = { Text("Are you sure you want to delete $selectedCity?") },
+                confirmButton = {
+                    Button(onClick = {
+                        cityList.remove(selectedCity)
+                        showDialog = false
+                    }) {
+                        Text("Delete")
+                    }
+                },
+                dismissButton = {
+                    Button(onClick = { showDialog = false }) {
+                        Text("Cancel")
+                    }
                 }
-            }
-            // If the result is null, do nothing
-            null -> {}
+            )
         }
 
     }
 }
 
 @Composable
-fun WeatherDetail(data: WeatherModel, isCelsius: Boolean) {
+fun CityCard(city: String, onAction: (String, String) -> Unit, data: WeatherModel) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(8.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(text = city, fontSize = 18.sp)
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Icon(Icons.Filled.LocationOn, contentDescription = "Location", modifier = Modifier.size(16.dp))
+                }
+
+                LaunchedEffect(city) {
+                    val weatherData = data.location.name
+                }
+
+                Text(text = "${data.current.temp_c}°C", fontSize = 24.sp, fontWeight = FontWeight.Bold)
+                Text(text = data.current.condition.text, fontSize = 14.sp)
+            }
+            var expanded by remember { mutableStateOf(false) }
+            IconButton(onClick = { expanded = true }) {
+                Icon(Icons.Filled.MoreVert, contentDescription = "Edit/Delete")
+            }
+            DropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false }
+            ) {
+                DropdownMenuItem(
+                    text = { Text("Edit") },
+                    onClick = {
+                        onAction("edit", city)
+                        expanded = false
+                    }
+                )
+                DropdownMenuItem(
+                    text = { Text("Delete") },
+                    onClick = {
+                        onAction("delete", city)
+                        expanded = false
+                    }
+                )
+            }
+        }
+    }
+}
+
+
+
+@Composable
+fun WeatherDetail(data: WeatherModel, isCelsius: Boolean, onCountryClick: (String) -> Unit) {
     val backgroundColor = weatherColors[data.current.condition.code] ?: Color.LightGray
 
     val textColor = if (backgroundColor.luminance() > 0.5) Color.Black else Color.White
@@ -158,6 +298,7 @@ fun WeatherDetail(data: WeatherModel, isCelsius: Boolean) {
             horizontalArrangement = Arrangement.Start,
             verticalAlignment = Alignment.Bottom
         ) {
+
             Icon(
                 imageVector = Icons.Default.LocationOn,
                 contentDescription = "Location icon",
@@ -170,7 +311,11 @@ fun WeatherDetail(data: WeatherModel, isCelsius: Boolean) {
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
-                Text(text = data.location.country, fontSize = 18.sp, color = Color.Gray)
+                Text(text = data.location.country, fontSize = 18.sp, color = Color.Gray,
+                    modifier = Modifier.clickable{
+                        onCountryClick(data.location.country)
+                    }
+                )
             }
 
 
