@@ -1,5 +1,6 @@
 package com.example.jetpack_compose_weather_app.main_event
 
+import android.annotation.SuppressLint
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -25,17 +26,20 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+@SuppressLint("MutableCollectionMutableState")
 @Composable
 fun MainScreen(viewModel: WeatherViewModel) {
     var showCityList by remember { mutableStateOf(false) }
     var selectedCountry by remember { mutableStateOf<String?>(null) }
     var currentCity by remember { mutableStateOf("") }
+    val cityList by remember { mutableStateOf(mutableListOf<String>()) }
 
     if (showCityList && selectedCountry != null) {
         CityListPage(
             viewModel = viewModel,
-            initialCity = currentCity,
-            onClose = { showCityList = false }
+            onClose = { showCityList = false },
+            country = selectedCountry!!,
+            cityList = cityList,
         )
     } else {
         WeatherDisplay(viewModel = viewModel) { country, city ->

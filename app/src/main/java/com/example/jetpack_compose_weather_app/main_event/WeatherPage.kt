@@ -73,23 +73,125 @@ import com.example.jetpack_compose_weather_app.data.weatherColors
 import com.example.jetpack_compose_weather_app.main_event.weatherDetailPages.HumidityDetailPage
 import com.example.jetpack_compose_weather_app.view_model.WeatherViewModel
 
+@SuppressLint("MutableCollectionMutableState", "UnrememberedMutableState")
+@Composable
+fun WeatherDisplay(viewModel: WeatherViewModel, onCountryClick: (String, String) -> Unit) {
+    var city by remember { mutableStateOf("") }
+
+    val keyboardController = LocalSoftwareKeyboardController.current
+
+//observe weatherResult state from the viewModel
+    val weatherResult = viewModel.weatherResult.observeAsState()
+
+    var isCelsius by remember {
+        mutableStateOf(true)
+    }
+
+    val backgroundColor = when(val result = weatherResult.value) {
+        is NetworkResponse.Success -> weatherColors[result.data.current.condition.code] ?: Color.LightGray
+        is NetworkResponse.Error -> Color.White
+        else -> Color.White
+    } //Default White if can't fetch for colors
+
+    Column (modifier = Modifier
+        .fillMaxWidth()
+        .padding(8.dp)
+        .background(backgroundColor),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ){
+        Spacer(modifier = Modifier.height(30.dp))
+
+        Row (
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceEvenly
+        ){
+            OutlinedTextField(
+                modifier = Modifier.weight(1f),
+                value = city,
+                onValueChange = { city = it },
+                label = { Text(text = "Enter Location") },
+            )
+            IconButton(onClick = {
+                viewModel.fetchWeather(city)
+                keyboardController?.hide()
+            }) {
+                Icon(imageVector = Icons.Default.Search, contentDescription = "Search for location")
+            }
+        }
+
+        var showCityList by remember { mutableStateOf(false) }
+        val selectedCountry by remember { mutableStateOf<String?>(null) }
+        var currentCity by remember { mutableStateOf("") }
+        val cityList = remember { mutableStateOf(mutableStateListOf<String>()) }
+
+        if (showCityList) {
+            cityList.value = mutableStateListOf(currentCity)
+            CityListPage(
+                viewModel = viewModel,
+                country = selectedCountry!!,
+                cityList = cityList.value
+            ) { showCityList = false }
+        } else {
+            when (val result = weatherResult.value) {
+                // If these is error, the retry button will show up below the error message
+                is NetworkResponse.Error -> {
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(text = "Error: ${result.message}")
+                        Button(onClick = { viewModel.fetchWeather(city) }) {
+                            Text("Retry")
+                        }
+                    }
+                }
+
+                // Display the circular progress indicator if the result is loading
+                NetworkResponse.Loading -> {
+                    CircularProgressIndicator(modifier = Modifier.size(64.dp))
+                }
+
+                // Display the weather details if the result is successful
+                is NetworkResponse.Success -> {
+                    currentCity = result.data.location.name
+                    WeatherDetail(data = result.data, isCelsius = isCelsius) {
+                            country -> onCountryClick(country, currentCity)
+                    }
+                    Button(onClick = { isCelsius = !isCelsius }) {
+                        Text(if (isCelsius) "Switch to Imperial" else "Switch to Metric")
+                    }
+                }
+                // If the result is null, do nothing
+                null -> {}
+            }
+        }
+    }
+}
+
 @SuppressLint("MutableCollectionMutableState")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CityListPage(
     viewModel: WeatherViewModel,
-    initialCity: String,
-    onClose: () -> Unit,
+    country: String,
+    cityList: MutableList<String>,
+    onClose: () -> Unit
 ) {
-    val cityList = remember { mutableStateListOf(initialCity) }
+//val cityList by remember { mutableStateOf(mutableStateListOf(initialCity)) }
     var showDialog by remember { mutableStateOf(false) }
     var selectedCity by remember { mutableStateOf("") }
     var weatherData by remember { mutableStateOf<Map<String, WeatherModel>>(emptyMap()) }
     val weatherResult = viewModel.weatherResult.observeAsState()
+    var showAddCityPage by remember { mutableStateOf(false) }
+    var showCityAlreadyAddedMessage by remember { mutableStateOf(false) }
 
-    LaunchedEffect(cityList) {
+    LaunchedEffect(cityList, country) {
         val newWeatherData = mutableMapOf<String, WeatherModel>()
         for (city in cityList) {
+            viewModel.fetchWeather(city)
             when (val result = weatherResult.value) {
                 is NetworkResponse.Success -> {
                     newWeatherData[city] = result.data
@@ -113,7 +215,7 @@ fun CityListPage(
         },
         floatingActionButton = {
             FloatingActionButton(onClick = {
-                cityList.add("New City ${cityList.size + 1}")
+                showAddCityPage = true
             }) {
                 Icon(Icons.Filled.Add, contentDescription = "Add City")
             }
@@ -129,8 +231,7 @@ fun CityListPage(
                             selectedCity = cityName
                             if (action == "delete") {
                                 showDialog = true
-                            }
-                            else{
+                            } else{
                                 //
                             }
                         },
@@ -159,187 +260,6 @@ fun CityListPage(
                 }
             )
         }
-    }
-}
-
-
-
-@SuppressLint("MutableCollectionMutableState", "UnrememberedMutableState")
-@Composable
-fun WeatherDisplay(viewModel: WeatherViewModel, onCountryClick: (String, String) -> Unit) {
-    var city by remember { mutableStateOf("") }
-
-    val keyboardController = LocalSoftwareKeyboardController.current
-
-    val weatherResult = viewModel.weatherResult.observeAsState()
-
-    var isCelsius by remember { mutableStateOf(true) }
-
-    val backgroundColor = when (val result = weatherResult.value) {
-        is NetworkResponse.Success -> weatherColors[result.data.current.condition.code]
-            ?: Color.LightGray
-        is NetworkResponse.Error -> Color.White
-        else -> Color.White
-    }
-
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(8.dp)
-            .background(backgroundColor),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Spacer(modifier = Modifier.height(30.dp))
-
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceEvenly
-        ) {
-            OutlinedTextField(
-                modifier = Modifier.weight(1f),
-                value = city,
-                onValueChange = { city = it },
-                label = { Text(text = "Enter Location") },
-            )
-            IconButton(onClick = {
-                viewModel.fetchWeather(city)
-                keyboardController?.hide()
-            }) {
-                Icon(imageVector = Icons.Default.Search, contentDescription = "Search for location")
-            }
-        }
-
-        var showCityList by remember { mutableStateOf(false) }
-        val selectedCountry by remember { mutableStateOf<String?>(null) }
-        var currentCity by remember { mutableStateOf("") }
-        val cityList = remember { mutableStateListOf<String>() }
-
-        if (showCityList) {
-            CityListPage(
-                viewModel = viewModel,
-                country = selectedCountry!!,
-                cityList = cityList
-            ) { showCityList = false }
-        } else {
-            when (val result = weatherResult.value) {
-                is NetworkResponse.Error -> {
-                    Column(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Text(text = "Error: ${result.message}")
-                        Button(onClick = { viewModel.fetchWeather(city) }) {
-                            Text("Retry")
-                        }
-                    }
-                }
-
-                NetworkResponse.Loading -> {
-                    CircularProgressIndicator(modifier = Modifier.size(64.dp))
-                }
-
-                is NetworkResponse.Success -> {
-                    currentCity = result.data.location.name
-                    WeatherDetail(data = result.data, isCelsius = isCelsius) { country ->
-                        onCountryClick(country, currentCity)
-                    }
-                    Button(onClick = { isCelsius = !isCelsius }) {
-                        Text(if (isCelsius) "Switch to Imperial" else "Switch to Metric")
-                    }
-                }
-
-                null -> {}
-            }
-        }
-    }
-}
-
-@SuppressLint("MutableCollectionMutableState")
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun CityListPage(
-    viewModel: WeatherViewModel,
-    country: String,
-    cityList: MutableList<String>,
-    onClose: () -> Unit
-) {
-    var showDialog by remember { mutableStateOf(false) }
-    var selectedCity by remember { mutableStateOf("") }
-    var weatherData by remember { mutableStateOf<Map<String, WeatherModel>>(emptyMap()) }
-    val weatherResult = viewModel.weatherResult.observeAsState()
-    var showAddCityPage by remember { mutableStateOf(false) }
-    var showCityAlreadyAddedMessage by remember { mutableStateOf(false) }
-
-    LaunchedEffect(cityList, country) {
-        val newWeatherData = mutableMapOf<String, WeatherModel>()
-        for (city in cityList) {
-            viewModel.fetchWeather(city)
-            when (val result = weatherResult.value) {
-                is NetworkResponse.Success -> {
-                    newWeatherData[city] = result.data
-                }
-
-                else -> {}
-            }
-        }
-        weatherData = newWeatherData
-    }
-
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(text = "Manage cities") },
-                navigationIcon = {
-                    IconButton(onClick = onClose) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                    }
-                }
-            )
-        },
-        floatingActionButton = {
-            FloatingActionButton(onClick = { showAddCityPage = true }) {
-                Icon(Icons.Filled.Add, contentDescription = "Add City")
-            }
-        }
-    ) { paddingValues ->
-        LazyColumn(modifier = Modifier.padding(paddingValues)) {
-            items(cityList) { city ->
-                val data = weatherData[city]
-                if (data != null) {
-                    CityCard(
-                        city = city,
-                        onAction= { action, cityName ->
-                            selectedCity = cityName
-                            if (action == "delete") {
-                                showDialog = true
-                            } else {
-                                // Handle other actions if needed
-                            } },
-                            data = data
-                    )
-                }}
-        }
-        if (showDialog) {
-            AlertDialog(
-                onDismissRequest = { showDialog = false },
-                title = { Text("Confirm Deletion") },
-                text = { Text("Are you sure you want to delete $selectedCity?") },
-                confirmButton = {Button(onClick = {
-                    cityList.remove(selectedCity)
-                    showDialog = false
-                }) {
-                    Text("Delete")
-                } },
-                dismissButton = {
-                    Button(onClick = { showDialog = false }) {
-                        Text("Cancel")
-                    }
-                }
-            )
-        }
         if (showAddCityPage) {
             AddCityPage(
                 onClose = { showAddCityPage = false },
@@ -355,21 +275,29 @@ fun CityListPage(
                 cityList = cityList
             )
         }
+
         if (showCityAlreadyAddedMessage) {
             Snackbar(
                 action = {
                     TextButton(onClick = { showCityAlreadyAddedMessage = false }) {
                         Text("OK")
                     }
-                         },
+                },
                 modifier = Modifier.padding(8.dp)
             ) { Text("City is already added to the list.") }
+        }
+
+        LaunchedEffect(cityList) {
+            for (city in cityList) {
+                viewModel.fetchWeather(city)
+            }
         }
     }
 }
 
 @Composable
 fun CityCard(city: String, onAction: (String, String) -> Unit, data: WeatherModel) {
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -382,22 +310,14 @@ fun CityCard(city: String, onAction: (String, String) -> Unit, data: WeatherMode
                 .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Column(modifier =Modifier.weight(1f)) {
+            Column(modifier = Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(text = city, fontSize = 18.sp)
                     Spacer(modifier = Modifier.width(4.dp))
-                    Icon(
-                        Icons.Filled.LocationOn,
-                        contentDescription = "Location",
-                        modifier = Modifier.size(16.dp)
-                    )
+                    Icon(Icons.Filled.LocationOn, contentDescription = "Location", modifier = Modifier.size(16.dp))
                 }
 
-                Text(
-                    text = "${data.current.temp_c}°C",
-                    fontSize = 24.sp,
-                    fontWeight = FontWeight.Bold
-                )
+                Text(text = "${data.current.temp_c}°C", fontSize = 24.sp, fontWeight = FontWeight.Bold)
                 Text(text = data.current.condition.text, fontSize = 14.sp)
             }
             var expanded by remember { mutableStateOf(false) }
@@ -434,7 +354,9 @@ fun AddCityPage(
         "Dubai", "Moscow", "Sydney", "Singapore", "Beijing", "Seoul"
     )
 
-    var topCitiesInCountry by remember { mutableStateOf<List<String>>(emptyList()) }
+    var topCitiesInCountry by remember {
+        mutableStateOf<List<String>>(emptyList())
+    }
 
     LaunchedEffect(Unit) {
         topCitiesInCountry = viewModel.fetchTopCitiesForCountry(initialCountry)
@@ -443,33 +365,31 @@ fun AddCityPage(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Add City") },
-                navigationIcon = {
+                title = { Text("Add City") },navigationIcon = {
                     IconButton(onClick = onClose) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                    }}
+                    }
+                }
             )
         }
     ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues),
+        Column(modifier = Modifier
+            .fillMaxSize()
+            .padding(paddingValues),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             var cityName by remember { mutableStateOf("") }
             OutlinedTextField(
-                value = cityName,
+                value= cityName,
                 onValueChange = { cityName = it },
                 label = { Text("City Name") },
                 modifier = Modifier.padding(16.dp)
             )
 
-            Button(
-                onClick = {
-                    onAddCity(cityName)
-                    onClose()
-                },
+            Button(onClick = {
+                onAddCity(cityName)
+                onClose()
+            },
                 modifier = Modifier.padding(16.dp)
             ) {
                 Text("Add City")
@@ -481,9 +401,8 @@ fun AddCityPage(
                 verticalArrangement = Arrangement.spacedBy(8.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                item(span = { GridItemSpan(2) }) {
-                    Text(
-                        "Top Cities in $initialCountry",
+                item (span = { GridItemSpan(2) }){
+                    Text("Top Cities in $initialCountry",
                         fontSize = 20.sp,
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier
@@ -492,52 +411,41 @@ fun AddCityPage(
                     )
                 }
                 items(topCitiesInCountry) { city ->
-                    RoundedCityCard(
-                        city = city,
-                        onAddCity = onAddCity,
-                        onClose = onClose,
-                        isCityAlreadyAdded = cityList.contains(city)
-                    )
+                    RoundedCityCard(city = city, onAddCity = onAddCity, onClose = onClose,
+                        isCityAlreadyAdded = cityList.contains(city))
                 }
 
                 item { Spacer(modifier = Modifier.height(16.dp)) }
 
-                item(span = { GridItemSpan(2) }) {
-                    Text(
-                        "Top Cities",
+                item (span = { GridItemSpan(2) }){
+                    Text("Top Cities",
                         fontSize = 20.sp,
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(start = 8.dp)
+                            .padding(start=8.dp)
                     )
                 }
                 items(topCities) { city ->
-                    RoundedCityCard(
-                        city = city,
-                        onAddCity = onAddCity,
-                        onClose = onClose,
-                        isCityAlreadyAdded = cityList.contains(city)
-                    )
-                }}
+                    RoundedCityCard(city = city, onAddCity = onAddCity, onClose = onClose,
+                        isCityAlreadyAdded = cityList.contains(city))
+                }
+            }
         }
+
+
     }
 }
 
 @Composable
-fun RoundedCityCard(
-    city: String,
-    onAddCity: (String) -> Unit,
-    onClose: () -> Unit,
-    isCityAlreadyAdded: Boolean
-) {
+fun RoundedCityCard(city: String, onAddCity: (String) -> Unit, onClose: () -> Unit, isCityAlreadyAdded: Boolean) {
     val cardColor = if (isCityAlreadyAdded) Color.LightGray else Color.White
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .padding(8.dp)
             .then(
-                if (!isCityAlreadyAdded) {
+                if(!isCityAlreadyAdded) {
                     Modifier.clickable {
                         onAddCity(city)
                         onClose()
@@ -557,9 +465,6 @@ fun RoundedCityCard(
         )
     }
 }
-
-
-
 
 @Composable
 fun WeatherDetail(data: WeatherModel, isCelsius: Boolean, onCountryClick: (String) -> Unit) {
@@ -792,5 +697,3 @@ fun WeatherDetailItem(label: String, value: String, textColor: Color) {
         }
     }
 }
-
-
